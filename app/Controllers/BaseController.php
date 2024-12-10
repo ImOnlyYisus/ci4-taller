@@ -9,18 +9,15 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
-/**
- * Class BaseController
- *
- * BaseController provides a convenient place for loading components
- * and performing functions that are needed by all your controllers.
- * Extend this class in any new controllers:
- *     class Home extends BaseController
- *
- * For security be sure to declare any new methods as protected or private.
- */
 abstract class BaseController extends Controller
 {
+    protected $encryptionKey = '';
+
+    public function __construct()
+    {
+        $this->encryptionKey = getenv('encryptionKey');
+    }
+
     /**
      * Instance of the main Request object.
      *
@@ -54,5 +51,22 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
 
         // E.g.: $this->session = \Config\Services::session();
+    }
+
+
+    public function encrypt(string $data): string
+    {
+        $cipher = "AES-256-CBC"; 
+        $key = hash('sha256', $this->encryptionKey);
+        $iv = substr(hash('sha256', $this->encryptionKey), 0, 16); 
+        return base64_encode(openssl_encrypt($data, $cipher, $key, 0, $iv));
+    }
+
+    public function decrypt(string $encryptedData): string
+    {
+        $cipher = "AES-256-CBC";
+        $key = hash('sha256', $this->encryptionKey);
+        $iv = substr(hash('sha256', $this->encryptionKey), 0, 16);
+        return openssl_decrypt(base64_decode($encryptedData), $cipher, $key, 0, $iv);
     }
 }
