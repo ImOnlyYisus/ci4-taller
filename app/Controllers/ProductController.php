@@ -9,7 +9,8 @@ use App\Models\ProductModel;
 
 class ProductController extends BaseController
 {
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct();
     }
     private function authenticate()
@@ -59,11 +60,35 @@ class ProductController extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['error' => 'Unauthorized']);
         }
 
-        $data = $this->request->getJSON();
-        $model = new ProductModel();
-        $id = $model->insert((array)$data);
+        $data = $this->request->getJSON(true);
 
-        return $this->response->setJSON(['message' => 'Product created successfully', 'id' => $this->encrypt($id)]);
+        $validationRules = [
+            'name' => 'required|min_length[3]|max_length[255]',
+            'price' => 'required|numeric|greater_than[0]',
+            'description' => 'permit_empty|max_length[500]',
+        ];
+
+        if (!$this->validate($validationRules)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'error' => 'Validation failed',
+                'messages' => $this->validator->getErrors(),
+            ]);
+        }
+
+        $model = new ProductModel();
+        try {
+            $id = $model->insert($data);
+
+            return $this->response->setJSON([
+                'message' => 'Product created successfully',
+                'id' => $this->encrypt($id),
+            ]);
+        } catch (\Exception $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Failed to create product',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function show($encryptedId)
